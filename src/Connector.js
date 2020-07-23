@@ -1,5 +1,9 @@
 class Connector {
   constructor(settings) { // eslint-disable-line no-useless-constructor, no-unused-vars
+    const iot = require('@google-cloud/iot');
+    this.client = new iot.v1.DeviceManagerClient();
+    this.iotAgentUrl = `http://${settings.iota.hostname}:${settings.iota.port}`;
+    this.iotAgentMQTT = `mqtt://${settings.iota.hostname}`;
   }
 
   async start() { // eslint-disable-line no-empty-function
@@ -12,6 +16,17 @@ class Connector {
   }
 
   async listDevices() { // eslint-disable-line no-empty-function
+    const projectId = await this.client.getProjectId();
+    const parent = await this.client.registryPath(projectId, 'us-central1', 'my-registry');
+    console.log(parent);
+    const [rscs] = await this.client.listDevices({
+      parent
+    });
+    console.log(`${rscs.length} resource(s) found.`);
+
+    for (const rsc of rscs) {
+      console.log(rsc);
+    }
   }
 
   // Device (fog) to cloud
