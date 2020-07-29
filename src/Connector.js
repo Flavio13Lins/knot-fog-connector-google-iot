@@ -9,6 +9,23 @@ class Connector {
   async start() { // eslint-disable-line no-empty-function
   }
 
+  async deviceExists(id) {
+    const projectId = await this.client.getProjectId();
+    const cloudRegion = 'us-central1';
+    const registryId = 'my-registry';
+    const deviceId = id;
+    try {
+      const devicePath = await this.client.devicePath(projectId, cloudRegion, registryId, deviceId);
+      await this.client.getDevice({ name: devicePath });
+    } catch (error) {
+      const errorCode = error.code;
+      if (errorCode === 5) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   async addDevice(device) { // eslint-disable-line no-empty-function, no-unused-vars
   }
 
@@ -21,29 +38,31 @@ class Connector {
     const registryId = 'my-registry';
     const registryPath = await this.client.registryPath(projectId, cloudRegion, registryId);
 
-    try{
+    try {
       const responses = await this.client.listDevices({
-        parent: registryPath
+        parent: registryPath,
       });
       const response = responses[0];
-      if (response.length === 0){
+      if (response.length === 0) {
         return [];
       }
-      return Promise.all( response.map( async (device) => {
-        try{
-          const devicePath = await this.client.devicePath(projectId, cloudRegion, registryId, device.id);
-          const deviceContent = await this.client.getDevice({name: devicePath});
+      return Promise.all(response.map(async (device) => {
+        try {
+          const devicePath = await this.client.devicePath(
+            projectId, cloudRegion, registryId, device.id,
+          );
+          const deviceContent = await this.client.getDevice({
+            name: devicePath,
+          });
           const schemaList = deviceContent[0].metadata;
           const name = deviceContent[0].name;
-          return {id: device.id, name: name, schema: schemaList};
-
-        } catch (error){
-          console.error(error);
+          return { id: device.id, name, schema: schemaList };
+        } catch (error) {
+          return error;
         }
-        
       }));
     } catch (error) {
-      console.error(error);
+      return error;
     }
   }
 
