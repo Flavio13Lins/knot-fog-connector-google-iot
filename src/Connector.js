@@ -1,17 +1,81 @@
+const iot = require('@google-cloud/iot');
+
+
 class Connector {
   constructor(settings) { // eslint-disable-line no-useless-constructor, no-unused-vars
+    this.client = new iot.v1.DeviceManagerClient();
+    this.iotAgentUrl = `http://${settings.iota.hostname}:${settings.iota.port}`;
+    this.iotAgentMQTT = `mqtt://${settings.iota.hostname}`;
   }
 
   async start() { // eslint-disable-line no-empty-function
   }
 
+  async deviceExists(id) {
+    const projectId = await this.client.getProjectId();
+    const cloudRegion = 'us-central1';
+    const registryId = 'my-registry';
+    const deviceId = id;
+    try {
+      const devicePath = await this.client.devicePath(projectId, cloudRegion, registryId, deviceId);
+      await this.client.getDevice({ name: devicePath });
+    } catch (error) {
+      const errorCode = error.code;
+      if (errorCode === 5) {
+        return false;
+      }
+      return error;
+    }
+    return true;
+  }
+
   async addDevice(device) { // eslint-disable-line no-empty-function, no-unused-vars
+    try {
+      if (await this.deviceExists(device.id)) {
+        return { id: device.id, name: '' };
+      }
+    } catch (error) {
+      return error;
+    } // Prepared to create new device
+    return { id: device.id, name: device.name };
   }
 
   async removeDevice(id) { // eslint-disable-line no-empty-function, no-unused-vars
   }
 
   async listDevices() { // eslint-disable-line no-empty-function
+    const projectId = await this.client.getProjectId();
+    const cloudRegion = 'us-central1';
+    const registryId = 'my-registry';
+    const registryPath = await this.client.registryPath(projectId, cloudRegion, registryId);
+
+    try {
+      const responses = await this.client.listDevices({
+        parent: registryPath,
+      });
+      const response = responses[0];
+      if (response.length === 0) {
+        return [];
+      }
+      return Promise.all(response.map(async (device) => {
+        try {
+          const devicePath = await this.client.devicePath(
+            projectId, cloudRegion, registryId, device.id,
+          );
+          const [deviceContent] = await this.client.getDevice({
+            name: devicePath,
+          });
+          const schemaList = deviceContent.metadata;
+          const { name } = deviceContent;
+
+          return { id: device.id, name, schema: schemaList };
+        } catch (error) {
+          return error;
+        }
+      }));
+    } catch (error) {
+      return error;
+    }
   }
 
   // Device (fog) to cloud
