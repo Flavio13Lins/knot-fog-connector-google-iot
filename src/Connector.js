@@ -27,6 +27,11 @@ class Connector {
   }
 
   async addDevice(device) { // eslint-disable-line no-empty-function, no-unused-vars
+    if (await this.deviceExists(device.id)) {
+      return { id: device.id, name: '' };
+    }
+    // Prepared to create new device
+    return { id: device.id, name: device.name };
   }
 
   async removeDevice(id) { // eslint-disable-line no-empty-function, no-unused-vars
