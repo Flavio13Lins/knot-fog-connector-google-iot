@@ -22,14 +22,21 @@ class Connector {
       if (errorCode === 5) {
         return false;
       }
+      else {
+        return error;
+      }
     }
     return true;
   }
 
   async addDevice(device) { // eslint-disable-line no-empty-function, no-unused-vars
-    if (await this.deviceExists(device.id)) {
-      return { id: device.id, name: '' };
-    }
+    try {
+      if (await this.deviceExists(device.id)) {
+        return { id: device.id, name: '' };
+      }
+    } catch (error) {
+      return error;
+    } 
     // Prepared to create new device
     return { id: device.id, name: device.name };
   }
