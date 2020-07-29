@@ -1,6 +1,8 @@
+const iot = require('@google-cloud/iot');
+
+
 class Connector {
   constructor(settings) { // eslint-disable-line no-useless-constructor, no-unused-vars
-    const iot = require('@google-cloud/iot');
     this.client = new iot.v1.DeviceManagerClient();
     this.iotAgentUrl = `http://${settings.iota.hostname}:${settings.iota.port}`;
     this.iotAgentMQTT = `mqtt://${settings.iota.hostname}`;
@@ -22,9 +24,7 @@ class Connector {
       if (errorCode === 5) {
         return false;
       }
-      else {
-        return error;
-      }
+      return error;
     }
     return true;
   }
@@ -36,8 +36,7 @@ class Connector {
       }
     } catch (error) {
       return error;
-    } 
-    // Prepared to create new device
+    } // Prepared to create new device
     return { id: device.id, name: device.name };
   }
 
@@ -63,11 +62,12 @@ class Connector {
           const devicePath = await this.client.devicePath(
             projectId, cloudRegion, registryId, device.id,
           );
-          const deviceContent = await this.client.getDevice({
+          const [deviceContent] = await this.client.getDevice({
             name: devicePath,
           });
-          const schemaList = deviceContent[0].metadata;
-          const name = deviceContent[0].name;
+          const schemaList = deviceContent.metadata;
+          const { name } = deviceContent;
+
           return { id: device.id, name, schema: schemaList };
         } catch (error) {
           return error;
