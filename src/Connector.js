@@ -17,15 +17,33 @@ class Connector {
 
   async listDevices() { // eslint-disable-line no-empty-function
     const projectId = await this.client.getProjectId();
-    const parent = await this.client.registryPath(projectId, 'us-central1', 'my-registry');
-    console.log(parent);
-    const [rscs] = await this.client.listDevices({
-      parent
-    });
-    console.log(`${rscs.length} resource(s) found.`);
+    const cloudRegion = 'us-central1';
+    const registryId = 'my-registry';
+    const registryPath = await this.client.registryPath(projectId, cloudRegion, registryId);
 
-    for (const rsc of rscs) {
-      console.log(rsc);
+    try{
+      const responses = await this.client.listDevices({
+        parent: registryPath
+      });
+      const response = responses[0];
+      if (response.length === 0){
+        return [];
+      }
+      return Promise.all( response.map( async (device) => {
+        try{
+          const devicePath = await this.client.devicePath(projectId, cloudRegion, registryId, device.id);
+          const deviceContent = await this.client.getDevice({name: devicePath});
+          const schemaList = deviceContent[0].metadata;
+          const name = deviceContent[0].name;
+          return {id: device.id, name: name, schema: schemaList};
+
+        } catch (error){
+          console.error(error);
+        }
+        
+      }));
+    } catch (error) {
+      console.error(error);
     }
   }
 
