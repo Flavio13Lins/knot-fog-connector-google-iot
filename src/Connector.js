@@ -1,6 +1,5 @@
 const iot = require('@google-cloud/iot');
 
-
 class Connector {
   constructor(settings) { // eslint-disable-line no-useless-constructor, no-unused-vars
     this.client = new iot.v1.DeviceManagerClient();
@@ -29,18 +28,56 @@ class Connector {
     return true;
   }
 
-  async addDevice(device) { // eslint-disable-line no-empty-function, no-unused-vars
+  async addDevice(newDevice) { // eslint-disable-line no-empty-function, no-unused-vars
+    const projectId = await this.client.getProjectId();
+    const cloudRegion = 'us-central1';
+    const registryId = 'my-registry';
+    const registryPath = await this.client.registryPath(projectId, cloudRegion, registryId);
     try {
-      if (await this.deviceExists(device.id)) {
-        return { id: device.id, name: '' };
+      if (await this.deviceExists(newDevice.id)) {
+        return { id: newDevice.id, name: '' };
       }
     } catch (error) {
       return error;
     } // Prepared to create new device
-    return { id: device.id, name: device.name };
+    // const rsaFileName = "rsa_private"+newDevice.id;+".pem";
+    // const certfic = openssl('openssl req -x509 -newkey rsa:2048 -keyout openssl/'+rsaFileName+' -nodes -out openssl/rsa_cert'+newDevice+'.pem -subj "/CN=unused"')
+    // console.log(certfic);
+    let device = {
+      id: newDevice.id,
+      credencials: [{
+          publicKey: {
+            format: 'RSA_X509_PEM',
+            // key: certific.toString(),
+          },
+      },],
+    }
+    const request = {
+      parent: registryPath,
+      device,
+    }
+    try{
+      const responses = await this.client.createDevice(request);
+      [device] = responses;
+    } catch (error) {
+      return error;
+    }
+    
+    return { id: device.id, name: device.id, token: device.numId, ref: device.name };
   }
 
   async removeDevice(id) { // eslint-disable-line no-empty-function, no-unused-vars
+    const projectId = await this.client.getProjectId();
+    const cloudRegion = 'us-central1';
+    const registryId = 'my-registry';
+    const deviceId = id;
+    const devicePath = await this.client.devicePath(projectId, cloudRegion, registryId, deviceId);
+    try {
+      const response = await this.client.deleteDevice({ name: devicePath });
+      return response;
+    } catch (error) {
+      return error;
+    }
   }
 
   async listDevices() { // eslint-disable-line no-empty-function
@@ -53,7 +90,7 @@ class Connector {
       const responses = await this.client.listDevices({
         parent: registryPath,
       });
-      const response = responses[0];
+      const [response] = responses;
       if (response.length === 0) {
         return [];
       }
@@ -65,10 +102,10 @@ class Connector {
           const [deviceContent] = await this.client.getDevice({
             name: devicePath,
           });
-          const schemaList = deviceContent.metadata;
-          const { name } = deviceContent;
+          const schema = deviceContent.metadata;
+          const ref = deviceContent.name;
 
-          return { id: device.id, name, schema: schemaList };
+          return { id: device.id, name: device.id, token: device.numId, ref, schema };
         } catch (error) {
           return error;
         }
@@ -84,6 +121,33 @@ class Connector {
   }
 
   async updateSchema(id, schemaList) { // eslint-disable-line no-empty-function, no-unused-vars
+    const projectId = await this.client.getProjectId();
+    const cloudRegion = 'us-central1';
+    const registryId = 'my-registry';
+    const deviceId = id;
+    try {
+      const devicePath = await this.client.devicePath(
+        projectId, cloudRegion, registryId, deviceId,
+      );
+      try{
+        const [device] = await this.client.getDevice({
+          name: devicePath,
+        })
+        device.metadata = schemaList;
+        console.log(device);
+        const updatedDevice = await this.client.updateDevice({ name: device.name }); 
+        // erro: TypeError: Cannot read property 'name' of undefined
+        // at DeviceManagerClient.updateDevice
+        console.log(updatedDevice, device.name);
+      } catch (error) {
+        console.error('erro2:', error);
+        return null;
+      }
+      return updateDevice;
+    } catch (error) {
+      console.error('error1:', error);
+      return error;
+    }
   }
 
   async updateProperties(id, properties) { // eslint-disable-line no-empty-function, no-unused-vars
