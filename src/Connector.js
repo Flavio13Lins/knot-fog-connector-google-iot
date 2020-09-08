@@ -2,18 +2,27 @@ const iot = require('@google-cloud/iot');
 
 class Connector {
   constructor(settings) { // eslint-disable-line no-useless-constructor, no-unused-vars
-    this.client = new iot.v1.DeviceManagerClient();
+    
+    this.client = null;
     this.iotAgentUrl = `http://${settings.iota.hostname}:${settings.iota.port}`;
     this.iotAgentMQTT = `mqtt://${settings.iota.hostname}`;
+    this.projectId = settings.credential.project_id;
+
   }
 
   async start() { // eslint-disable-line no-empty-function
+    this.client = new iot.v1.DeviceManagerClient();
+    this.deviceId = 'my-device';
+    this.region = 'us-central1';
+    this.registryId = 'my-registry';
+    this.mqttClientId = `projects/${this.projectId}/locations/${this.region}/registries/${this.registryId}/devices/${this.deviceId}`;
+    
   }
 
   async deviceExists(id) {
-    const projectId = await this.client.getProjectId();
-    const cloudRegion = 'us-central1';
-    const registryId = 'my-registry';
+    const projectId = await this.projectId;
+    const cloudRegion = this.region;
+    const registryId = this.registryId;
     const deviceId = id;
     try {
       const devicePath = await this.client.devicePath(projectId, cloudRegion, registryId, deviceId);
@@ -30,8 +39,8 @@ class Connector {
 
   async addDevice(newDevice) { // eslint-disable-line no-empty-function, no-unused-vars
     const projectId = await this.client.getProjectId();
-    const cloudRegion = 'us-central1';
-    const registryId = 'my-registry';
+    const cloudRegion = this.region;
+    const registryId = this.registryId;
     const registryPath = await this.client.registryPath(projectId, cloudRegion, registryId);
     try {
       if (await this.deviceExists(newDevice.id)) {
@@ -39,18 +48,9 @@ class Connector {
       }
     } catch (error) {
       return error;
-    } // Prepared to create new device
-    // const rsaFileName = "rsa_private"+newDevice.id;+".pem";
-    // const certfic = openssl('openssl req -x509 -newkey rsa:2048 -keyout openssl/'+rsaFileName+' -nodes -out openssl/rsa_cert'+newDevice+'.pem -subj "/CN=unused"')
-    // console.log(certfic);
+    } 
     let device = {
       id: newDevice.id,
-      credencials: [{
-          publicKey: {
-            format: 'RSA_X509_PEM',
-            // key: certific.toString(),
-          },
-      },],
     }
     const request = {
       parent: registryPath,
@@ -68,8 +68,8 @@ class Connector {
 
   async removeDevice(id) { // eslint-disable-line no-empty-function, no-unused-vars
     const projectId = await this.client.getProjectId();
-    const cloudRegion = 'us-central1';
-    const registryId = 'my-registry';
+    const cloudRegion = this.region;
+    const registryId = this.registryId;
     const deviceId = id;
     const devicePath = await this.client.devicePath(projectId, cloudRegion, registryId, deviceId);
     try {
@@ -82,8 +82,8 @@ class Connector {
 
   async listDevices() { // eslint-disable-line no-empty-function
     const projectId = await this.client.getProjectId();
-    const cloudRegion = 'us-central1';
-    const registryId = 'my-registry';
+    const cloudRegion = this.region;
+    const registryId = this.registryId;
     const registryPath = await this.client.registryPath(projectId, cloudRegion, registryId);
 
     try {
@@ -104,7 +104,6 @@ class Connector {
           });
           const schema = deviceContent.metadata;
           const ref = deviceContent.name;
-
           return { id: device.id, name: device.id, token: device.numId, ref, schema };
         } catch (error) {
           return error;
@@ -118,36 +117,39 @@ class Connector {
   // Device (fog) to cloud
 
   async publishData(id, dataList) { // eslint-disable-line no-empty-function, no-unused-vars
+
   }
 
   async updateSchema(id, schemaList) { // eslint-disable-line no-empty-function, no-unused-vars
     const projectId = await this.client.getProjectId();
-    const cloudRegion = 'us-central1';
-    const registryId = 'my-registry';
+    const cloudRegion = this.region;
+    const registryId = this.registryId;
     const deviceId = id;
     try {
       const devicePath = await this.client.devicePath(
         projectId, cloudRegion, registryId, deviceId,
       );
       try{
-        const [device] = await this.client.getDevice({
+        await this.client.getDevice({
           name: devicePath,
-        })
-        device.metadata = schemaList;
-        console.log(device);
-        const updatedDevice = await this.client.updateDevice({ name: device.name }); 
-        // erro: TypeError: Cannot read property 'name' of undefined
-        // at DeviceManagerClient.updateDevice
-        console.log(updatedDevice, device.name);
+        }).then( async ([response]) => {
+          let newdevice = {
+            metadata: schemaList,
+            name: response.name,
+          }
+          const request = {
+            device: newdevice,
+            updateMask: {'paths': ['metadata']}
+          }
+          await this.client.updateDevice(request);
+        });
       } catch (error) {
-        console.error('erro2:', error);
-        return null;
+        return error;
       }
-      return updateDevice;
     } catch (error) {
-      console.error('error1:', error);
       return error;
     }
+    return 'Device updated.'
   }
 
   async updateProperties(id, properties) { // eslint-disable-line no-empty-function, no-unused-vars
