@@ -1,15 +1,22 @@
 import { Connector } from './Connector';
-// const node_openssl = require('node-openssl-cert');
+
+
 const settings = { // Teste do Connector
   iota: {
-      hostname: "localhost",
-      port: "8080"
-  }
+    hostname: "localhost",
+    port: "8080",
+  },
+  credential: {}
 };
 
-const tryconnector = new Connector(settings); //usando construtor
+//usando construtor
+const tryconnector = new Connector(settings); 
 
-// const add = tryconnector.addDevice({id: 'my-device'}); //adicionando device: my-device
+tryconnector.start().then( (res) => {
+  console.log(res);
+});
+
+// const add = tryconnector.addDevice({id: 'another-one'}); //adicionando device: my-device
 // add.then( function(resp) {
 //   if(resp){
 //     console.log(resp);
@@ -26,7 +33,7 @@ const tryconnector = new Connector(settings); //usando construtor
 //   }
 // })
 
-// const update = tryconnector.updateSchema('my-device', { 'sensors': '1', 'sensor-termico': '35' }); //tentativa do update em my-device
+// const update = tryconnector.updateSchema('another-one', { 'sensors': '1', 'sensor-termico': '36' }); //tentativa do update em my-device
 // update.then( function(responses){
 //   if(responses){
 //     console.log('Update response:', responses);
