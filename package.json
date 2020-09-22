@@ -22,7 +22,8 @@
   "eslint-config-airbnb-base": "^14.1.0",
   "eslint-import-resolver-babel-module": "^5.1.2",
   "eslint-plugin-import": "^2.20.2",
-  "pre-commit": "^1.2.2"
+  "pre-commit": "^1.2.2",
+  "node-forge": ">=0.10.0"
  },
  "pre-commit": [
   "lint"
