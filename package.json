@@ -29,6 +29,8 @@
  ],
  "dependencies": {
   "@google-cloud/iot": "^2.1.0",
-  "@google-cloud/storage": "^5.1.2"
+  "@google-cloud/storage": "^5.1.2",
+  "jsonwebtoken": "^8.5.1",
+  "mqtt": "^4.2.1"
  }
 }
